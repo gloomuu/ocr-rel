@@ -1,0 +1,28 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ocr-rel
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_PATH: ${DATABASE_PATH:-data/ocr-rel.db}
+      UPLOAD_STORAGE_PATH: ${UPLOAD_STORAGE_PATH:-data/uploads}
+      MAX_UPLOAD_FILE_SIZE: ${MAX_UPLOAD_FILE_SIZE:-10485760}
+      MAX_STORED_FILES: ${MAX_STORED_FILES:-100}
+      MAX_CONCURRENT_TASKS: ${MAX_CONCURRENT_TASKS:-2}
+      TEST_PAGE_DEFAULT_OCR_ENGINE: ${TEST_PAGE_DEFAULT_OCR_ENGINE:-aliyun}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

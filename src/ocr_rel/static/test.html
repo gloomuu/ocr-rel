@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 识别联调测试页</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --border: #d9e2ef;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --danger: #dc2626;
+      --success: #059669;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .app-content {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .app-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    }
+    .app-topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      height: 56px;
+      padding: 0 24px;
+    }
+    .app-topbar-brand {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      min-width: 0;
+    }
+    .app-topbar-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .app-topbar-subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .logout-btn {
+      flex-shrink: 0;
+    }
+    .container {
+      width: 100%;
+      margin: 0;
+      padding: 24px;
+      box-sizing: border-box;
+      flex: 1;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(420px, 1fr);
+      gap: 16px;
+      align-items: stretch;
+      width: 100%;
+      min-height: calc(100vh - 56px - 48px);
+    }
+    .layout-main {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+      height: 100%;
+    }
+    .layout-main .card {
+      margin-bottom: 0;
+    }
+    .layout-main .card-callback {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+    .layout-main .card-callback textarea {
+      flex: 1;
+      min-height: 280px;
+    }
+    .layout-sidebar {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+      height: 100%;
+    }
+    .layout-sidebar .history-panel {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      height: 100%;
+      margin-bottom: 0;
+    }
+    .history-panel-body {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+    }
+    .layout-sidebar table {
+      width: 100%;
+      font-size: 13px;
+      table-layout: fixed;
+    }
+    .layout-sidebar th,
+    .layout-sidebar td {
+      padding: 8px 6px;
+      word-break: break-word;
+    }
+    .layout-sidebar th:nth-child(1),
+    .layout-sidebar td:nth-child(1) { width: 22%; }
+    .layout-sidebar th:nth-child(2),
+    .layout-sidebar td:nth-child(2) { width: 10%; }
+    .layout-sidebar th:nth-child(3),
+    .layout-sidebar td:nth-child(3) { width: 12%; }
+    .layout-sidebar th:nth-child(4),
+    .layout-sidebar td:nth-child(4) { width: 16%; }
+    .layout-sidebar th:nth-child(5),
+    .layout-sidebar td:nth-child(5) { width: 20%; }
+    .layout-sidebar th:nth-child(6),
+    .layout-sidebar td:nth-child(6) { width: 12%; }
+    .layout-sidebar th:nth-child(7),
+    .layout-sidebar td:nth-child(7) { width: 8%; }
+    @media (max-width: 1180px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .layout-main,
+      .layout-sidebar {
+        height: auto;
+      }
+      .layout-main .card-callback {
+        flex: none;
+      }
+      .layout-sidebar .history-panel {
+        height: auto;
+        min-height: 320px;
+      }
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    }
+    h1 { margin: 0 0 8px; font-size: 24px; }
+    h2 { margin: 0 0 12px; font-size: 18px; }
+    p { margin: 0 0 16px; color: var(--muted); line-height: 1.6; }
+    label { display: block; font-weight: 600; margin-bottom: 8px; }
+    input, select, button, textarea { font: inherit; }
+    .text-input,
+    input[type="text"],
+    input[type="password"],
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+    }
+    .text-input:focus,
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+    input[type="file"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .page-intro {
+      margin-bottom: 8px;
+    }
+    .page-intro p {
+      margin: 0 0 16px;
+    }
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+    }
+    button.secondary { background: #e5e7eb; color: var(--text); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .flow {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .flow-item {
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .progress-wrap {
+      height: 10px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #2563eb, #059669);
+      transition: width 0.3s ease;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .status.pending, .status.running, .status.queued { background: #fef3c7; color: #92400e; }
+    .status.success { background: #d1fae5; color: var(--success); }
+    .status.failed { background: #fee2e2; color: var(--danger); }
+    .timeline { list-style: none; padding: 0; margin: 0; }
+    .timeline li {
+      position: relative;
+      padding: 10px 0 10px 20px;
+      border-left: 2px solid #dbeafe;
+      margin-left: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .timeline li:last-child { border-left-color: transparent; }
+    .timeline li.active { color: var(--text); font-weight: 600; }
+    .timeline li.done { color: var(--success); }
+    textarea {
+      width: 100%;
+      min-height: 320px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      resize: vertical;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    .meta { color: var(--muted); font-size: 14px; margin-top: 8px; }
+    .error { color: var(--danger); white-space: pre-wrap; margin-top: 8px; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    th { color: var(--muted); font-weight: 600; }
+    tbody tr { transition: background 0.15s ease; }
+    tbody tr:hover { background: #f8fafc; }
+    .history-toolbar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .history-empty { color: var(--muted); font-size: 14px; padding: 12px 0; }
+    .btn-link {
+      background: transparent;
+      color: var(--primary);
+      padding: 4px 8px;
+      font-weight: 600;
+    }
+    .btn-link:disabled { color: var(--muted); cursor: not-allowed; }
+    .file-link {
+      background: transparent;
+      color: var(--primary);
+      padding: 0;
+      font-weight: 600;
+      text-align: left;
+    }
+    .file-link:disabled { color: var(--muted); cursor: not-allowed; }
+    .file-name-cell {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: inline-block;
+      vertical-align: bottom;
+    }
+    .preview-body {
+      padding: 0;
+      min-height: 70vh;
+      background: #0f172a;
+    }
+    .preview-body iframe,
+    .preview-body img {
+      width: 100%;
+      min-height: 70vh;
+      border: none;
+      display: block;
+      background: #fff;
+    }
+    .preview-body img {
+      object-fit: contain;
+      background: #111827;
+    }
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .modal[hidden] { display: none; }
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+    }
+    .modal-content {
+      position: relative;
+      width: min(900px, 100%);
+      max-height: 85vh;
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-header h3 { margin: 0; font-size: 16px; }
+    .modal-close {
+      background: transparent;
+      color: var(--muted);
+      padding: 4px 10px;
+      font-size: 20px;
+      line-height: 1;
+    }
+    .modal-body {
+      padding: 16px 20px 20px;
+      overflow: auto;
+    }
+    .modal-body textarea {
+      min-height: 420px;
+    }
+    .login-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.48);
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 1000;
+    }
+    .login-overlay.is-visible {
+      display: flex;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 400px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 28px 24px;
+      box-shadow: 0 20px 48px rgba(15, 23, 42, 0.18);
+    }
+    .login-card h2 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      text-align: center;
+    }
+    .login-card > p {
+      margin: 0 0 24px;
+      text-align: center;
+      font-size: 14px;
+    }
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .login-field label {
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+    .login-submit {
+      width: 100%;
+      margin-top: 4px;
+      padding: 11px 16px;
+    }
+    .login-error {
+      color: var(--danger);
+      font-size: 13px;
+      min-height: 18px;
+      text-align: center;
+    }
+    .app-content.is-hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+      <h2>登录</h2>
+      <p>请输入用户名和密码，登录后接口请求将自动携带 token。</p>
+      <form id="loginForm" class="login-form">
+        <div class="login-field">
+          <label for="loginUsername">用户名</label>
+          <input id="loginUsername" class="text-input" type="text" autocomplete="username" placeholder="请输入用户名" />
+        </div>
+        <div class="login-field">
+          <label for="loginPassword">密码</label>
+          <input id="loginPassword" class="text-input" type="password" autocomplete="current-password" placeholder="请输入密码" />
+        </div>
+        <button id="loginBtn" class="login-submit" type="submit">确认登录</button>
+        <div id="loginError" class="login-error"></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="appContent" class="app-content is-hidden">
+  <header class="app-topbar">
+    <div class="app-topbar-inner">
+      <div class="app-topbar-brand">
+        <span class="app-topbar-title">AI 识别联调测试</span>
+        <span class="app-topbar-subtitle">OCR 结构化抽取</span>
+      </div>
+      <button id="logoutBtn" class="secondary logout-btn" type="button" hidden>退出登录</button>
+    </div>
+  </header>
+  <div class="container">
+    <div class="layout">
+      <div class="layout-main">
+    <div class="card">
+      <div class="page-intro">
+        <p>模拟业务侧流程：提交识别请求 → 后台异步处理（展示进度） → 查看回调参数（格式同 <code>/api/ai/result/callback</code>）。</p>
+      </div>
+      <div class="flow">
+        <span class="flow-item">1. 提交识别</span>
+        <span class="flow-item">2. 异步处理</span>
+        <span class="flow-item">3. 查看回调结果</span>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="registrationId">registrationId</label>
+          <input id="registrationId" type="text" value="test-registration-001" />
+        </div>
+        <div>
+          <label for="docType">附件 type</label>
+          <select id="docType">
+            <option value="1">1 - 营业执照</option>
+            <option value="2">2 - 法人身份证</option>
+            <option value="3">3 - 审计报告</option>
+          </select>
+        </div>
+        <div>
+          <label for="attachmentName">附件 name</label>
+          <input id="attachmentName" type="text" value="营业执照" />
+        </div>
+        <div>
+          <label for="ocrEngine">OCR 引擎</label>
+          <select id="ocrEngine">
+            <option value="paddle">paddle</option>
+            <option value="aliyun">aliyun</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="file">附件文件（PDF/PNG/JPG）</label>
+          <input id="file" type="file" accept="application/pdf,.pdf,image/png,.png,image/jpeg,.jpg,.jpeg" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="submitBtn">提交识别请求</button>
+        <button id="viewCallbackBtn" class="secondary" disabled>查看回调结果</button>
+      </div>
+      <div class="meta" id="pageConfigMeta"></div>
+      <div class="meta" id="taskMeta">尚未提交任务</div>
+    </div>
+
+    <div class="card">
+      <h2>处理进度</h2>
+      <div id="statusLine" class="meta">等待提交</div>
+      <div class="progress-wrap">
+        <div id="progressBar" class="progress-bar"></div>
+      </div>
+      <ul id="timeline" class="timeline"></ul>
+      <div id="errorBox" class="error"></div>
+    </div>
+
+    <div class="card card-callback">
+      <h2>回调 Payload（/api/ai/result/callback）</h2>
+      <textarea id="callbackBox" readonly placeholder="任务成功后点击「查看回调结果」，或从历史任务中选择"></textarea>
+    </div>
+      </div>
+
+      <aside class="layout-sidebar">
+    <div class="card history-panel">
+      <h2>调用历史</h2>
+      <div class="history-toolbar">
+        <p style="margin:0;">最近 10 次调用，按时间倒序</p>
+        <button id="refreshHistoryBtn" class="secondary">刷新</button>
+      </div>
+      <div class="history-panel-body">
+        <div id="historyEmpty" class="history-empty">暂无调用记录</div>
+        <table id="historyTable" hidden>
+          <thead>
+            <tr>
+              <th>调用时间</th>
+              <th>状态</th>
+              <th>处理耗时</th>
+              <th>附件类型</th>
+              <th>文件名</th>
+              <th>文件大小</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+      </aside>
+    </div>
+  </div>
+  </div>
+
+  <div id="filePreviewModal" class="modal" hidden>
+    <div class="modal-backdrop" id="filePreviewBackdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="filePreviewTitle">文件预览</h3>
+        <button id="closeFilePreviewBtn" class="modal-close" type="button" aria-label="关闭">×</button>
+      </div>
+      <div id="filePreviewBody" class="preview-body"></div>
+    </div>
+  </div>
+
+  <div id="callbackModal" class="modal" hidden>
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>回调结果</h3>
+        <button id="closeModalBtn" class="modal-close" type="button" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body">
+        <textarea id="modalCallbackBox" readonly placeholder="暂无回调结果"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const AUTH_TOKEN_KEY = "ocrRelAuthToken";
+    const appContent = document.getElementById("appContent");
+    const loginOverlay = document.getElementById("loginOverlay");
+    const loginForm = document.getElementById("loginForm");
+    const loginUsernameInput = document.getElementById("loginUsername");
+    const loginPasswordInput = document.getElementById("loginPassword");
+    const loginBtn = document.getElementById("loginBtn");
+    const loginError = document.getElementById("loginError");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const registrationIdInput = document.getElementById("registrationId");
+    const docTypeInput = document.getElementById("docType");
+    const attachmentNameInput = document.getElementById("attachmentName");
+    const ocrEngineInput = document.getElementById("ocrEngine");
+    const fileInput = document.getElementById("file");
+    const submitBtn = document.getElementById("submitBtn");
+    const viewCallbackBtn = document.getElementById("viewCallbackBtn");
+    const taskMeta = document.getElementById("taskMeta");
+    const statusLine = document.getElementById("statusLine");
+    const progressBar = document.getElementById("progressBar");
+    const timeline = document.getElementById("timeline");
+    const callbackBox = document.getElementById("callbackBox");
+    const errorBox = document.getElementById("errorBox");
+    const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
+    const historyTable = document.getElementById("historyTable");
+    const historyBody = document.getElementById("historyBody");
+    const historyEmpty = document.getElementById("historyEmpty");
+    const pageConfigMeta = document.getElementById("pageConfigMeta");
+    const callbackModal = document.getElementById("callbackModal");
+    const modalBackdrop = document.getElementById("modalBackdrop");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+    const modalCallbackBox = document.getElementById("modalCallbackBox");
+    const filePreviewModal = document.getElementById("filePreviewModal");
+    const filePreviewBackdrop = document.getElementById("filePreviewBackdrop");
+    const closeFilePreviewBtn = document.getElementById("closeFilePreviewBtn");
+    const filePreviewTitle = document.getElementById("filePreviewTitle");
+    const filePreviewBody = document.getElementById("filePreviewBody");
+
+    let currentTaskId = null;
+    let pollTimer = null;
+    let maxUploadFileSize = 10 * 1024 * 1024;
+    let authEnabled = false;
+    let previewObjectUrl = null;
+
+    function getAuthToken() {
+      return sessionStorage.getItem(AUTH_TOKEN_KEY) || "";
+    }
+
+    function setAuthToken(token) {
+      if (token) {
+        sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+      } else {
+        sessionStorage.removeItem(AUTH_TOKEN_KEY);
+      }
+    }
+
+    function updateLogoutButton() {
+      logoutBtn.hidden = !(authEnabled && getAuthToken());
+    }
+
+    function showLogin() {
+      loginOverlay.classList.add("is-visible");
+      appContent.classList.add("is-hidden");
+      updateLogoutButton();
+    }
+
+    function showApp() {
+      loginOverlay.classList.remove("is-visible");
+      appContent.classList.remove("is-hidden");
+      updateLogoutButton();
+    }
+
+    function logout() {
+      stopPolling();
+      setAuthToken("");
+      loginError.textContent = "";
+      loginPasswordInput.value = "";
+      errorBox.textContent = "";
+      showLogin();
+      if (authEnabled) {
+        loginUsernameInput.focus();
+      }
+    }
+
+    function extractErrorMessage(payload, fallback) {
+      if (!payload) return fallback;
+      if (typeof payload.detail === "string") return payload.detail;
+      if (Array.isArray(payload.detail) && payload.detail.length > 0) {
+        return payload.detail.map((item) => item.msg || String(item)).join("; ");
+      }
+      return payload.message || fallback;
+    }
+
+    async function apiFetch(url, options = {}) {
+      const headers = new Headers(options.headers || {});
+      const token = getAuthToken();
+      if (token) {
+        headers.set("token", token);
+      }
+      const response = await fetch(url, { ...options, headers });
+      if (response.status === 401 && token) {
+        logout();
+        throw new Error("未授权，请重新登录");
+      }
+      return response;
+    }
+
+    async function login(event) {
+      if (event) event.preventDefault();
+      loginError.textContent = "";
+      const username = loginUsernameInput.value.trim();
+      const password = loginPasswordInput.value;
+      if (!username || !password) {
+        loginError.textContent = "请输入用户名和密码";
+        return;
+      }
+
+      loginBtn.disabled = true;
+      try {
+        const response = await fetch("/api/v1/auth/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(extractErrorMessage(payload, "登录失败"));
+        }
+
+        const token = payload && payload.data && payload.data.token;
+        if (!token) {
+          throw new Error("登录成功但未返回 token");
+        }
+
+        setAuthToken(token);
+        authEnabled = true;
+        loginPasswordInput.value = "";
+        showApp();
+
+        try {
+          await initializeApp();
+        } catch (err) {
+          errorBox.textContent = String(err);
+        }
+      } catch (err) {
+        loginError.textContent = String(err);
+      } finally {
+        loginBtn.disabled = false;
+      }
+    }
+
+    loginForm.addEventListener("submit", login);
+    logoutBtn.addEventListener("click", logout);
+
+    docTypeInput.addEventListener("change", () => {
+      attachmentNameInput.value = docTypeInput.options[docTypeInput.selectedIndex].text.split(" - ")[1] || "";
+    });
+
+    function setStatus(status, stage, progress) {
+      statusLine.innerHTML =
+        `任务状态：<span class="status ${status}">${status}</span>` +
+        (stage ? ` | 当前阶段：${stage}` : "") +
+        (typeof progress === "number" ? ` | 进度：${progress}%` : "");
+      progressBar.style.width = `${progress || 0}%`;
+    }
+
+    function renderTimeline(steps) {
+      timeline.innerHTML = "";
+      (steps || []).forEach((step, index) => {
+        const li = document.createElement("li");
+        li.textContent = `[${step.progress}%] ${step.stage} - ${step.message}`;
+        if (index === steps.length - 1) li.classList.add("active");
+        else li.classList.add("done");
+        timeline.appendChild(li);
+      });
+    }
+
+    function stopPolling() {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }
+
+    async function pollTask() {
+      if (!currentTaskId) return;
+      const response = await apiFetch(`/api/v1/test/tasks/${currentTaskId}`);
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || "查询任务失败");
+      }
+
+      const data = payload.data;
+      setStatus(data.status, data.stage, data.progress);
+      renderTimeline(data.steps);
+      errorBox.textContent = data.error || "";
+
+      if (data.status === "success") {
+        stopPolling();
+        submitBtn.disabled = false;
+        viewCallbackBtn.disabled = false;
+        await loadHistory();
+      } else if (data.status === "failed") {
+        stopPolling();
+        submitBtn.disabled = false;
+        viewCallbackBtn.disabled = true;
+        callbackBox.value = "";
+        await loadHistory();
+      }
+    }
+
+    function startPolling() {
+      stopPolling();
+      pollTimer = setInterval(() => {
+        pollTask().catch((err) => {
+          errorBox.textContent = String(err);
+          stopPolling();
+          submitBtn.disabled = false;
+        });
+      }, 1500);
+    }
+
+    submitBtn.addEventListener("click", async () => {
+      const file = fileInput.files[0];
+      if (!file) {
+        alert("请先选择附件文件");
+        return;
+      }
+      if (file.size > maxUploadFileSize) {
+        alert(`文件大小不能超过 ${(maxUploadFileSize / (1024 * 1024)).toFixed(0)}MB`);
+        return;
+      }
+
+      submitBtn.disabled = true;
+      viewCallbackBtn.disabled = true;
+      stopPolling();
+      callbackBox.value = "";
+      errorBox.textContent = "";
+      setStatus("pending", "accepted", 5);
+      renderTimeline([{ stage: "accepted", message: "准备提交...", progress: 5 }]);
+
+      const formData = new FormData();
+      formData.append("registration_id", registrationIdInput.value);
+      formData.append("doc_type", docTypeInput.value);
+      formData.append("attachment_name", attachmentNameInput.value);
+      formData.append("ocr_engine", ocrEngineInput.value);
+      formData.append("file", file);
+
+      try {
+        const response = await apiFetch("/api/v1/test/recognize", {
+          method: "POST",
+          body: formData,
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.detail || payload.message || "提交识别失败");
+        }
+
+        currentTaskId = payload.data.taskId;
+        taskMeta.textContent =
+          `taskId: ${currentTaskId} | registrationId: ${payload.data.registrationId} | OCR: ${payload.data.ocrEngine}`;
+        setStatus("running", "accepted", 10);
+        startPolling();
+        await pollTask();
+        await loadHistory();
+      } catch (err) {
+        errorBox.textContent = String(err);
+        submitBtn.disabled = false;
+      }
+    });
+
+    function formatTime(value) {
+      if (!value) return "-";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleString("zh-CN", { hour12: false });
+    }
+
+    function formatDuration(item) {
+      if (item.durationMs != null) {
+        if (item.durationMs < 1000) return `${item.durationMs} ms`;
+        return `${(item.durationMs / 1000).toFixed(2)} s`;
+      }
+      if (item.status === "pending" || item.status === "running") return "处理中";
+      if (item.stage === "queued") return "排队中";
+      return "-";
+    }
+
+    function formatFileType(item) {
+      const parts = [];
+      if (item.docTypeName) {
+        parts.push(item.docType != null ? `${item.docType} - ${item.docTypeName}` : item.docTypeName);
+      } else if (item.docType != null) {
+        parts.push(`type ${item.docType}`);
+      }
+      if (item.fileFormat) {
+        parts.push(item.fileFormat);
+      }
+      return parts.length ? parts.join(" · ") : "-";
+    }
+
+    function formatFileSize(size) {
+      if (size == null) return "-";
+      if (size < 1024) return `${size} B`;
+      if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+      return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+    }
+
+    const STATUS_LABELS = {
+      success: "成功",
+      failed: "失败",
+      pending: "等待中",
+      running: "处理中",
+      queued: "排队中",
+    };
+
+    function formatStatusBadge(status, stage) {
+      if (status === "pending" && stage === "queued") {
+        return `<span class="status queued">${STATUS_LABELS.queued}</span>`;
+      }
+      const label = STATUS_LABELS[status] || status || "-";
+      const cssClass = status || "pending";
+      return `<span class="status ${cssClass}">${label}</span>`;
+    }
+
+    async function fetchCallback(taskId) {
+      const response = await apiFetch(`/api/v1/tasks/${taskId}/callback`);
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || "获取回调结果失败");
+      }
+      return payload.data;
+    }
+
+    async function loadCallback(taskId) {
+      const data = await fetchCallback(taskId);
+      callbackBox.value = JSON.stringify(data, null, 2);
+    }
+
+    function openCallbackModal(content) {
+      modalCallbackBox.value = content;
+      callbackModal.hidden = false;
+    }
+
+    function closeCallbackModal() {
+      callbackModal.hidden = true;
+      modalCallbackBox.value = "";
+    }
+
+    function closeFilePreviewModal() {
+      filePreviewModal.hidden = true;
+      filePreviewBody.innerHTML = "";
+      if (previewObjectUrl) {
+        URL.revokeObjectURL(previewObjectUrl);
+        previewObjectUrl = null;
+      }
+    }
+
+    async function openFilePreview(taskId, fileName, fileFormat) {
+      if (previewObjectUrl) {
+        URL.revokeObjectURL(previewObjectUrl);
+        previewObjectUrl = null;
+      }
+
+      const response = await apiFetch(`/api/v1/tasks/${taskId}/file`);
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.detail || payload.message || "加载文件预览失败");
+      }
+
+      const blob = await response.blob();
+      previewObjectUrl = URL.createObjectURL(blob);
+      const url = previewObjectUrl;
+      filePreviewTitle.textContent = fileName || "文件预览";
+      filePreviewBody.innerHTML = "";
+      const format = (fileFormat || "").toUpperCase();
+      if (format === "PDF") {
+        filePreviewBody.innerHTML = `<iframe src="${url}" title="${fileName || "PDF preview"}"></iframe>`;
+      } else {
+        filePreviewBody.innerHTML = `<img src="${url}" alt="${fileName || "image preview"}" />`;
+      }
+      filePreviewModal.hidden = false;
+    }
+
+    async function showCallbackModal(taskId) {
+      try {
+        const data = await fetchCallback(taskId);
+        openCallbackModal(JSON.stringify(data, null, 2));
+      } catch (err) {
+        errorBox.textContent = String(err);
+      }
+    }
+
+    async function loadHistory() {
+      const params = new URLSearchParams({ page: "1", pageSize: "10" });
+      const response = await apiFetch(`/api/v1/tasks?${params.toString()}`);
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || "加载调用历史失败");
+      }
+
+      const items = payload.data.items || [];
+      historyBody.innerHTML = "";
+      if (items.length === 0) {
+        historyTable.hidden = true;
+        historyEmpty.hidden = false;
+        historyEmpty.textContent = "暂无调用记录";
+        return;
+      }
+
+      historyEmpty.hidden = true;
+      historyTable.hidden = false;
+      items.forEach((item) => {
+        const row = document.createElement("tr");
+        const canView = item.status === "success" && item.hasResult;
+        row.innerHTML =
+          `<td>${formatTime(item.createdAt)}</td>` +
+          `<td>${formatStatusBadge(item.status, item.stage)}</td>` +
+          `<td>${formatDuration(item)}</td>` +
+          `<td>${formatFileType(item)}</td>` +
+          `<td>${formatFileNameCell(item)}</td>` +
+          `<td>${formatFileSize(item.fileSize)}</td>` +
+          `<td><button type="button" class="btn-link callback-btn" ${canView ? "" : "disabled"}>查看回调</button></td>`;
+
+        const viewBtn = row.querySelector(".callback-btn");
+        if (canView) {
+          viewBtn.addEventListener("click", (event) => {
+            event.stopPropagation();
+            showCallbackModal(item.taskId);
+          });
+        }
+        const fileBtn = row.querySelector(".file-link");
+        if (fileBtn) {
+          fileBtn.addEventListener("click", (event) => {
+            event.stopPropagation();
+            openFilePreview(item.taskId, item.fileName, item.fileFormat);
+          });
+        }
+        historyBody.appendChild(row);
+      });
+    }
+
+    function formatFileNameCell(item) {
+      if (!item.fileName) return "-";
+      const displayName = truncateFileName(item.fileName);
+      const title = escapeHtml(item.fileName);
+      const label = escapeHtml(displayName);
+      if (!item.hasStoredFile) {
+        return `<span class="file-name-cell" title="${title}">${label}</span>`;
+      }
+      return `<button type="button" class="btn-link file-link file-name-cell" title="${title}">${label}</button>`;
+    }
+
+    const FILE_NAME_MAX_LEN = 15;
+
+    function truncateFileName(name, maxLen = FILE_NAME_MAX_LEN) {
+      if (!name || name.length <= maxLen) return name;
+      return `${name.slice(0, maxLen)}…`;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    refreshHistoryBtn.addEventListener("click", () => {
+      loadHistory().catch((err) => {
+        errorBox.textContent = String(err);
+      });
+    });
+
+    closeModalBtn.addEventListener("click", closeCallbackModal);
+    modalBackdrop.addEventListener("click", closeCallbackModal);
+    closeFilePreviewBtn.addEventListener("click", closeFilePreviewModal);
+    filePreviewBackdrop.addEventListener("click", closeFilePreviewModal);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        if (!callbackModal.hidden) closeCallbackModal();
+        if (!filePreviewModal.hidden) closeFilePreviewModal();
+      }
+    });
+
+    viewCallbackBtn.addEventListener("click", async () => {
+      if (!currentTaskId) return;
+      try {
+        const data = await fetchCallback(currentTaskId);
+        callbackBox.value = JSON.stringify(data, null, 2);
+        openCallbackModal(JSON.stringify(data, null, 2));
+      } catch (err) {
+        errorBox.textContent = String(err);
+      }
+    });
+
+    async function loadPageConfig() {
+      const response = await fetch("/api/v1/test/config");
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.detail || payload.message || "加载页面配置失败");
+      }
+      const config = payload.data;
+      authEnabled = Boolean(config.authEnabled);
+      ocrEngineInput.value = config.ocrEngine || "aliyun";
+      if (config.maxUploadFileSize) {
+        maxUploadFileSize = config.maxUploadFileSize;
+      }
+      const maxMb = (maxUploadFileSize / (1024 * 1024)).toFixed(0);
+      pageConfigMeta.textContent =
+        `默认 OCR：${config.ocrEngine} | 并发上限：${config.maxConcurrentTasks}（超出排队）| 上传限制：${maxMb}MB | 本地保留：${config.maxStoredFiles || 100} 个文件` +
+        (authEnabled ? " | 鉴权：已开启" : " | 鉴权：未开启");
+      updateLogoutButton();
+    }
+
+    async function initializeApp() {
+      await loadHistory();
+    }
+
+    async function bootstrap() {
+      try {
+        await loadPageConfig();
+      } catch (err) {
+        ocrEngineInput.value = "aliyun";
+        pageConfigMeta.textContent = "默认 OCR：aliyun | 上传限制：10MB";
+        errorBox.textContent = String(err);
+      }
+
+      if (authEnabled) {
+        if (getAuthToken()) {
+          showApp();
+          try {
+            await initializeApp();
+          } catch (err) {
+            errorBox.textContent = String(err);
+          }
+        } else {
+          showLogin();
+        }
+        return;
+      }
+
+      showApp();
+      try {
+        await initializeApp();
+      } catch (err) {
+        errorBox.textContent = String(err);
+      }
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>
