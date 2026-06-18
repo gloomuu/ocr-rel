@@ -9,7 +9,12 @@ from ocr_rel.parsers.base import BaseParser
 class LegalPersonIdParser(BaseParser):
     doc_type = 2
 
-    def parse(self, text: str, personnel: str | None = None) -> dict[str, Any]:
+    def parse(
+        self,
+        text: str,
+        personnel: str | None = None,
+        attachment_name: str | None = None,
+    ) -> dict[str, Any]:
         compact = self._normalize(text)
         name = self._extract_name(text, compact)
         id_card = self._extract_id_card(compact)

@@ -28,19 +28,22 @@ class Settings(BaseSettings):
     auth_password: str = ""
     auth_secret_key: str = ""
 
-    ocr_engine: str = "paddle"
+    ocr_engine: str = "local"
+    ocr_server_url: str = "http://127.0.0.1:6006"
+    ocr_confidence_threshold: float = 0.6
+    ocr_timeout: float = 180.0
 
     aliyun_access_key_id: str = ""
     aliyun_access_key_secret: str = ""
     aliyun_ocr_endpoint: str = "ocr-api.cn-hangzhou.aliyuncs.com"
 
     # Test page defaults (frontend reads via /api/v1/test/config)
-    test_page_default_ocr_engine: str = "aliyun"
+    test_page_default_ocr_engine: str = "local"
 
     extraction_strategy: str = "llm"
     llm_api_key: str = ""
     llm_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    llm_model: str = "qwen-plus"
+    llm_model: str = "qwen-vl-plus"
     llm_timeout: float = 60.0
     llm_temperature: float = 0.0
     llm_fallback_to_regex: bool = True
@@ -69,8 +72,8 @@ class Settings(BaseSettings):
     @classmethod
     def _normalize_ocr_engine(cls, value: str) -> str:
         normalized = str(value).strip().lower()
-        if normalized not in {"paddle", "aliyun"}:
-            raise ValueError(f"Invalid OCR engine: {value}. Supported: paddle, aliyun")
+        if normalized not in {"local", "paddle", "aliyun"}:
+            raise ValueError(f"Invalid OCR engine: {value}. Supported: local, paddle, aliyun")
         return normalized
 
 

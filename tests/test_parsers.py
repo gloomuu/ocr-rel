@@ -168,3 +168,18 @@ def test_audit_report_parser_balance_sheet_page() -> None:
     """
     result = AuditReportParser().parse(text)
     assert result["totalAssets"] == "21000000"
+
+
+def test_capital_verification_parser_cover() -> None:
+    from ocr_rel.parsers.type4_capital_verification import CapitalVerificationParser
+
+    text = """
+    验资报告
+    被验资单位：河南测试售电有限公司
+    会计师事务所：立信会计师事务所（特殊普通合伙）河南分所
+    验资报告文号：京信验字(2023)第12345号
+    """
+    result = CapitalVerificationParser().parse(text)
+    assert result["companyName"] == "河南测试售电有限公司"
+    assert "立信会计师事务所" in result["accountingFirmName"]
+    assert result["reportCode"] == "京信验字(2023)第12345号"

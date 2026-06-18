@@ -95,6 +95,25 @@ def normalize_spaces(text: str) -> str:
     return re.sub(r"\s+", "", text)
 
 
+def contains_keyword(text: str, keyword: str) -> bool:
+    """Match keyword in OCR text, ignoring whitespace between characters."""
+    if not text or not keyword:
+        return False
+    if keyword in text:
+        return True
+
+    compact = normalize_spaces(text)
+    compact_keyword = normalize_spaces(keyword)
+    if compact_keyword in compact:
+        return True
+
+    chars = [re.escape(char) for char in compact_keyword if not char.isspace()]
+    if not chars:
+        return False
+    pattern = r"\s*".join(chars)
+    return bool(re.search(pattern, text)) or bool(re.search(pattern, compact))
+
+
 def split_lines(text: str) -> list[str]:
     return [line.strip() for line in text.splitlines() if line.strip()]
 
@@ -163,6 +182,16 @@ def _clean_address(value: str) -> str:
         index = cleaned.find(marker)
         if index > 0:
             cleaned = cleaned[:index]
+    cleaned = re.sub(
+        r"(\d+层)\d*([^\d层室号幢座路街巷道社区栋单元]{1,3})$",
+        r"\1",
+        cleaned,
+    )
+    cleaned = re.sub(
+        r"(层|号|室|幢|座)(\d*)([^\u4e00-\u9fff0-9（）()·\-—#层室号幢座路街巷道社区组]+)$",
+        r"\1\2",
+        cleaned,
+    )
     return cleaned.strip(" ，,。;；")
 
 
@@ -481,6 +510,37 @@ def extract_approval_date(text: str, establish_date: str | None = None) -> str |
     if dates:
         return dates[-1]
     return None
+
+
+def extract_approval_date_from_seal(text: str, establish_date: str | None = None) -> str | None:
+    """Extract approval date from seal-region OCR, tolerating noise between month and day."""
+    result = extract_approval_date(text, establish_date)
+    if result:
+        return result
+
+    for line in split_lines(text):
+        formatted = _extract_loose_date(line)
+        if formatted and formatted != establish_date:
+            return formatted
+
+    compact = normalize_spaces(text)
+    formatted = _extract_loose_date(compact)
+    if formatted and formatted != establish_date:
+        return formatted
+    return None
+
+
+def _extract_loose_date(text: str) -> str | None:
+    """Parse approval dates when OCR inserts noise between month and day."""
+    compact = normalize_spaces(text)
+    match = re.search(
+        r"(\d{4})\s*年\s*(\d{1,2})\s*月\s*[^\d]{0,8}(\d{1,2})\s*日?",
+        compact,
+    )
+    if not match:
+        return None
+    year, month, day = match.groups()
+    return format_chinese_date(f"{year}年{int(month)}月{int(day)}日")
 
 
 def extract_company_name(text: str) -> str | None:

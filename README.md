@@ -6,7 +6,7 @@
 
 - 生产接口：`POST /api/v1/recognize`
 - 测试页面：`GET /test`（模拟业务侧：提交识别 → 进度轮询 → 查看回调 → 历史任务）
-- OCR 双引擎：`paddle` / `aliyun`（配置切换）
+- OCR 三引擎：`local`（本地 HTTP OCR 服务）/ `paddle` / `aliyun`（配置切换）
 - 结构化抽取：**方案 A**（OCR 文本 → 大模型 → JSON），regex 兜底
 - 任务持久化：SQLite 存储任务进度与回调结果，支持历史查询
 - Phase 1 支持附件：`type=1` 营业执照、`type=2` 法人身份证、`type=3` 审计报告（首页抽封面字段 + 分页定位资产负债表）
@@ -49,13 +49,16 @@ uvicorn ocr_rel.main:app --reload --host 0.0.0.0 --port 8000
 
 | 变量 | 说明 | 默认 |
 |------|------|------|
-| `OCR_ENGINE` | `paddle` 或 `aliyun` | `paddle` |
+| `OCR_ENGINE` | `local`、`paddle` 或 `aliyun` | `local` |
+| `OCR_SERVER_URL` | 本地 OCR HTTP 服务地址（`OCR_ENGINE=local` 时） | `http://127.0.0.1:6006` |
+| `OCR_CONFIDENCE_THRESHOLD` | OCR 置信度阈值（高于此值才保留） | `0.6` |
+| `OCR_TIMEOUT` | OCR HTTP 请求超时（秒） | `180` |
 | `LOG_FILE_ENABLED` | 是否输出日志文件 | `true` |
 | `LOG_DIR` | 日志目录 | `logs` |
 | `EXTRACTION_STRATEGY` | `llm` 或 `regex` | `llm` |
 | `LLM_API_KEY` | 大模型 API Key（OpenAI 兼容） | - |
 | `LLM_BASE_URL` | 大模型 API 地址 | DashScope 兼容地址 |
-| `LLM_MODEL` | 模型名称 | `qwen-plus` |
+| `LLM_MODEL` | 多模态大模型（文本 + 图片，OpenAI 兼容） | `qwen-vl-plus` |
 | `LLM_FALLBACK_TO_REGEX` | LLM 失败时是否 regex 兜底 | `true` |
 | `ALIYUN_ACCESS_KEY_ID` | 阿里云 OCR AK | - |
 | `ALIYUN_ACCESS_KEY_SECRET` | 阿里云 OCR SK | - |
@@ -136,6 +139,9 @@ PDF/图片 → OCR → 纯文本 → 大模型(JSON Schema Prompt) → 字段校
 ```
 
 配置 `EXTRACTION_STRATEGY=llm` 且设置 `LLM_API_KEY` 后生效。支持 OpenAI 兼容接口（如阿里云 DashScope）。
+
+- **type=1 营业执照**：印刷字段走 OCR + 规则；`registerAuthority` / `approvalDate` 仅在多模态模型（模型名含 `vl`/`vision` 等）且 OCR 未识别时，通过公章图片补充；纯文本模型不做推测，识别不到则留空。
+- **type=3 审计报告**等：同样使用 `LLM_MODEL`（纯文本 prompt，不传图）。
 
 ## 测试接口
 

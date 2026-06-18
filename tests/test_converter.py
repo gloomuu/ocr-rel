@@ -6,10 +6,11 @@ from PIL import Image
 from ocr_rel.pdf.converter import detect_document_kind, detect_file_format_label, document_to_images, is_image, is_pdf
 
 
-def _make_pdf_bytes() -> bytes:
+def _make_pdf_bytes(*, pages: int = 1) -> bytes:
     doc = fitz.open()
-    page = doc.new_page()
-    page.insert_text((72, 72), "sample")
+    for _ in range(pages):
+        page = doc.new_page()
+        page.insert_text((72, 72), "sample")
     return doc.tobytes()
 
 
@@ -32,6 +33,16 @@ def test_document_to_images_pdf() -> None:
     assert len(images) == 1
 
 
+def test_document_to_images_type4_uses_first_page_only() -> None:
+    images = document_to_images(_make_pdf_bytes(pages=5), doc_type=4, filename="capital.pdf")
+    assert len(images) == 1
+
+
+def test_document_to_images_type6_renders_all_pages() -> None:
+    images = document_to_images(_make_pdf_bytes(pages=5), doc_type=6, filename="grade-protection.pdf")
+    assert len(images) == 5
+
+
 def test_document_to_images_png_for_type1() -> None:
     images = document_to_images(_make_png_bytes(), doc_type=1, filename="license.png")
     assert len(images) == 1
@@ -40,6 +51,11 @@ def test_document_to_images_png_for_type1() -> None:
 
 def test_document_to_images_png_for_type2() -> None:
     images = document_to_images(_make_png_bytes(), doc_type=2, filename="idcard.jpg")
+    assert len(images) == 1
+
+
+def test_document_to_images_png_for_type5() -> None:
+    images = document_to_images(_make_png_bytes(), doc_type=5, filename="employee-id.jpg")
     assert len(images) == 1
 
 

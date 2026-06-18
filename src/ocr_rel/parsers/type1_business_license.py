@@ -16,7 +16,12 @@ from ocr_rel.parsers.text_utils import (
 class BusinessLicenseParser(BaseParser):
     doc_type = 1
 
-    def parse(self, text: str, personnel: str | None = None) -> dict[str, Any]:
+    def parse(
+        self,
+        text: str,
+        personnel: str | None = None,
+        attachment_name: str | None = None,
+    ) -> dict[str, Any]:
         establish_date = extract_date_near_label(text, ["成立日期", "成立时间"]) or ""
         return {
             "unifiedSocialCreditCode": extract_credit_code(text) or "",

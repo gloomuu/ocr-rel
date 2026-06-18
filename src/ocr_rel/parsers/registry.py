@@ -2,11 +2,17 @@ from ocr_rel.parsers.base import BaseParser
 from ocr_rel.parsers.type1_business_license import BusinessLicenseParser
 from ocr_rel.parsers.type2_legal_person_id import LegalPersonIdParser
 from ocr_rel.parsers.type3_audit_report import AuditReportParser
+from ocr_rel.parsers.type4_capital_verification import CapitalVerificationParser
+from ocr_rel.parsers.type5_employee_id import EmployeeIdParser
+from ocr_rel.parsers.type6_grade_protection import TechSupportDocParser
 
 PARSER_REGISTRY: dict[int, BaseParser] = {
     1: BusinessLicenseParser(),
     2: LegalPersonIdParser(),
     3: AuditReportParser(),
+    4: CapitalVerificationParser(),
+    5: EmployeeIdParser(),
+    6: TechSupportDocParser(),
 }
 
 

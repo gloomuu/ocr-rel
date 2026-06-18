@@ -26,12 +26,28 @@ router = APIRouter(prefix="/api/v1/test", tags=["test"])
 
 @router.get("/supported-types", response_model=ApiResponse, dependencies=[Depends(verify_api_auth)])
 async def list_supported_types() -> ApiResponse:
-    return ApiResponse(data={"types": supported_types()})
+    types = supported_types()
+    items = [
+        {
+            "type": doc_type,
+            "name": ATTACHMENT_TYPE_NAMES.get(doc_type, f"type-{doc_type}"),
+        }
+        for doc_type in types
+    ]
+    return ApiResponse(data={"types": types, "items": items})
 
 
 @router.get("/config", response_model=ApiResponse)
 async def get_test_config() -> ApiResponse:
     """Return test page defaults from server configuration."""
+    types = supported_types()
+    supported_type_items = [
+        {
+            "type": doc_type,
+            "name": ATTACHMENT_TYPE_NAMES.get(doc_type, f"type-{doc_type}"),
+        }
+        for doc_type in types
+    ]
     return ApiResponse(
         data={
             "ocrEngine": settings.test_page_default_ocr_engine,
@@ -40,6 +56,8 @@ async def get_test_config() -> ApiResponse:
             "maxStoredFiles": settings.max_stored_files,
             "serverOcrEngine": settings.ocr_engine,
             "authEnabled": settings.auth_enabled,
+            "supportedTypes": types,
+            "supportedTypeItems": supported_type_items,
         }
     )
 

@@ -61,9 +61,10 @@ async def test_llm_extractor_extract_cover_fields(monkeypatch: pytest.MonkeyPatc
     class FakeClient:
         is_configured = True
 
-        async def chat_json(self, system_prompt: str, user_prompt: str) -> dict:
+        async def chat_json(self, *, system_prompt: str, user_prompt: str, images=None) -> dict:
             assert "accountingFirmName" in system_prompt
             assert "此码用于证明" in user_prompt
+            assert images is None
             return {
                 "companyName": "深圳壹创国际设计股份有限公司",
                 "accountingFirmName": "致同会计师事务所(特殊普通合伙)",
@@ -84,9 +85,10 @@ async def test_llm_extractor_extract_total_assets(monkeypatch: pytest.MonkeyPatc
     class FakeClient:
         is_configured = True
 
-        async def chat_json(self, system_prompt: str, user_prompt: str) -> dict:
+        async def chat_json(self, *, system_prompt: str, user_prompt: str, images=None) -> dict:
             assert "totalAssets" in system_prompt
             assert "资产总计" in user_prompt
+            assert images is None
             return {"totalAssets": "188,364,096.84"}
 
     from ocr_rel.llm.extractor import LlmExtractor
@@ -103,7 +105,7 @@ async def test_extraction_service_uses_llm_when_available(monkeypatch: pytest.Mo
     class FakeLlmExtractor:
         is_available = True
 
-        async def extract(self, doc_type, ocr_text, *, personnel=None):
+        async def extract(self, doc_type, ocr_text, *, personnel=None, attachment_name=None):
             return {
                 "unifiedSocialCreditCode": "91410000MA9ABCDEF0",
                 "companyName": "LLM公司",
@@ -123,7 +125,7 @@ async def test_extraction_service_fallback_to_regex() -> None:
     class FailingLlmExtractor:
         is_available = True
 
-        async def extract(self, doc_type, ocr_text, *, personnel=None):
+        async def extract(self, doc_type, ocr_text, *, personnel=None, attachment_name=None):
             raise RuntimeError("llm down")
 
     text = """

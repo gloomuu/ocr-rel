@@ -38,6 +38,7 @@ class ExtractionService:
         ocr_text: str,
         *,
         personnel: str | None = None,
+        attachment_name: str | None = None,
         task_id: str | None = None,
         registration_id: str | None = None,
     ) -> dict[str, Any]:
@@ -62,6 +63,7 @@ class ExtractionService:
                     doc_type,
                     ocr_text,
                     personnel=personnel,
+                    attachment_name=attachment_name,
                 )
                 log_step(
                     logger,
@@ -96,7 +98,11 @@ class ExtractionService:
             message="使用 regex 规则抽取",
             docType=doc_type,
         )
-        detail = get_parser(doc_type).parse(ocr_text, personnel=personnel)
+        detail = get_parser(doc_type).parse(
+            ocr_text,
+            personnel=personnel,
+            attachment_name=attachment_name,
+        )
         if doc_type == 1:
             detail = self._finalize_business_license_detail(detail, ocr_text)
         elif doc_type == 3:

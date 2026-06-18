@@ -4,6 +4,7 @@ import re
 
 from ocr_rel.models.schemas import ATTACHMENT_TYPE_NAMES
 from ocr_rel.parsers.registry import supported_types
+from ocr_rel.parsers.text_utils import contains_keyword
 
 _BUSINESS_LICENSE_KEYWORDS: list[tuple[str, int]] = [
     ("营业执照", 4),
@@ -43,11 +44,57 @@ _AUDIT_REPORT_KEYWORDS: list[tuple[str, int]] = [
     ("资产总计", 2),
 ]
 
+_CAPITAL_VERIFICATION_KEYWORDS: list[tuple[str, int]] = [
+    ("验资报告", 4),
+    ("被验资单位", 3),
+    ("验资单位", 3),
+    ("会计师事务所", 3),
+    ("注册资本", 2),
+    ("实收资本", 2),
+    ("出资", 2),
+    ("报告文号", 2),
+    ("报告编码", 2),
+    ("验字", 2),
+]
+
+_GRADE_PROTECTION_KEYWORDS: list[tuple[str, int]] = [
+    ("信息系统安全等级", 5),
+    ("网络安全等级保护", 5),
+    ("信息安全等级保护", 5),
+    ("等级保护备案证明", 5),
+    ("等级保护", 4),
+    ("等保", 3),
+    ("备案证明", 3),
+    ("安全保护等级", 3),
+    ("公安机关", 2),
+    ("备案号", 2),
+    ("备案单位", 2),
+    ("系统名称", 1),
+    ("单位名称", 1),
+]
+
+_SOFTWARE_COPYRIGHT_KEYWORDS: list[tuple[str, int]] = [
+    ("软件著作权", 5),
+    ("软件著作权登记证书", 5),
+    ("计算机软件著作权", 4),
+    ("著作权登记", 3),
+    ("著作权人", 3),
+    ("登记号", 2),
+    ("软件名称", 1),
+]
+
+_TYPE6_KEYWORDS: list[tuple[str, int]] = _GRADE_PROTECTION_KEYWORDS + _SOFTWARE_COPYRIGHT_KEYWORDS
+
 _TYPE_KEYWORDS: dict[int, list[tuple[str, int]]] = {
     1: _BUSINESS_LICENSE_KEYWORDS,
     2: _ID_CARD_KEYWORDS,
     3: _AUDIT_REPORT_KEYWORDS,
+    4: _CAPITAL_VERIFICATION_KEYWORDS,
+    5: _ID_CARD_KEYWORDS,
+    6: _TYPE6_KEYWORDS,
 }
+
+_ID_CARD_TYPES = {2, 5, 7}
 
 _CREDIT_CODE_PATTERN = re.compile(r"[0-9A-HJ-NP-RTUW-Y]{2}\d{6}[0-9A-HJ-NP-RTUW-Y]{10}")
 _ID_CARD_PATTERN = re.compile(r"\d{17}[\dXx]")
@@ -64,7 +111,7 @@ def _normalize(text: str) -> str:
 def _keyword_score(text: str, keywords: list[tuple[str, int]]) -> int:
     score = 0
     for keyword, weight in keywords:
-        if keyword in text:
+        if contains_keyword(text, keyword):
             score += weight
     return score
 
@@ -74,13 +121,11 @@ def score_document_type(doc_type: int, text: str) -> int:
         return 0
 
     normalized = _normalize(text)
-    score = _keyword_score(text, _TYPE_KEYWORDS[doc_type]) + _keyword_score(
-        normalized, _TYPE_KEYWORDS[doc_type]
-    )
+    score = _keyword_score(text, _TYPE_KEYWORDS[doc_type])
 
     if doc_type == 1 and _CREDIT_CODE_PATTERN.search(normalized):
         score += 3
-    if doc_type == 2 and _ID_CARD_PATTERN.search(normalized):
+    if doc_type in _ID_CARD_TYPES and _ID_CARD_PATTERN.search(normalized):
         score += 3
 
     return score
@@ -106,7 +151,15 @@ def validate_document_type(doc_type: int, text: str) -> None:
     declared_score = score_document_type(doc_type, text)
     detected_type = detect_document_type(text)
 
+    if doc_type == 6:
+        from ocr_rel.parsers.type6_grade_protection import is_type6_content
+
+        if is_type6_content(text):
+            return
+
     if detected_type is not None and detected_type != doc_type:
+        if doc_type in _ID_CARD_TYPES and detected_type in _ID_CARD_TYPES and declared_score >= 3:
+            return
         detected_name = ATTACHMENT_TYPE_NAMES.get(detected_type, f"type-{detected_type}")
         raise DocumentTypeMismatchError(
             f"文件内容与声明类型不一致：声明为「{declared_name}」，"

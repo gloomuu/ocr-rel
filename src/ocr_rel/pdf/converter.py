@@ -4,8 +4,12 @@ import fitz
 from PIL import Image
 
 from ocr_rel.config import settings
+from ocr_rel.logging_config import get_logger, log_step
 
-IMAGE_SUPPORTED_TYPES = {1, 2}
+logger = get_logger(__name__)
+
+IMAGE_SUPPORTED_TYPES = {1, 2, 5}
+COVER_PAGE_ONLY_TYPES = {4}
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
 PDF_EXTENSIONS = {".pdf"}
 
@@ -52,18 +56,36 @@ def detect_file_format_label(content: bytes, filename: str | None = None) -> str
     return None
 
 
-def pdf_to_images(pdf_bytes: bytes, dpi: int | None = None) -> list[Image.Image]:
-    """Convert each PDF page to a PIL Image."""
+def pdf_to_images(
+    pdf_bytes: bytes,
+    dpi: int | None = None,
+    *,
+    max_pages: int | None = None,
+) -> list[Image.Image]:
+    """Convert PDF pages to PIL Images; optionally limit to the first N pages."""
     render_dpi = dpi or settings.pdf_render_dpi
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     images: list[Image.Image] = []
     try:
         zoom = render_dpi / 72.0
         matrix = fitz.Matrix(zoom, zoom)
-        for page in doc:
-            pixmap = page.get_pixmap(matrix=matrix, alpha=False)
+        total_pages = len(doc)
+        page_count = total_pages if max_pages is None else min(total_pages, max_pages)
+        for page_index in range(page_count):
+            pixmap = doc[page_index].get_pixmap(matrix=matrix, alpha=False)
             image = Image.open(BytesIO(pixmap.tobytes("png")))
             images.append(image.convert("RGB"))
+        if max_pages is not None:
+            skipped_pages = max(0, total_pages - page_count)
+            log_step(
+                logger,
+                step="pdf.render.limited",
+                message="PDF 按页数上限渲染",
+                totalPagesInPdf=total_pages,
+                renderedPages=page_count,
+                maxPages=max_pages,
+                skippedPages=skipped_pages,
+            )
     finally:
         doc.close()
     return images
@@ -79,11 +101,23 @@ def document_to_images(
     *,
     doc_type: int,
     filename: str | None = None,
+    max_pages: int | None = None,
 ) -> list[Image.Image]:
     kind = detect_document_kind(content, filename)
+    page_limit = max_pages
+    if page_limit is None and doc_type in COVER_PAGE_ONLY_TYPES:
+        page_limit = 1
 
     if kind == "pdf":
-        images = pdf_to_images(content)
+        if doc_type in COVER_PAGE_ONLY_TYPES:
+            log_step(
+                logger,
+                step="pdf.cover_only",
+                message=f"type{doc_type} 启用仅首页模式（maxPages=1）",
+                docType=doc_type,
+                maxPages=page_limit,
+            )
+        images = pdf_to_images(content, max_pages=page_limit)
         if not images:
             raise ValueError("PDF contains no pages")
         return images

@@ -45,6 +45,33 @@ class FakeIdCardOcrEngine:
         return await self.recognize_image(None)
 
 
+class FakeGradeProtectionOcrEngine:
+    async def recognize_image(self, image) -> str:
+        return (
+            "信息系统安全等级保护备案证明\n"
+            "单位名称：河南测试售电有限公司\n"
+            "系统名称：售电业务技术支持系统\n"
+            "安全保护等级：第二级\n"
+            "备案号：41010000000-00001"
+        )
+
+    async def recognize_images(self, images) -> str:
+        return await self.recognize_image(None)
+
+
+class FakeSoftwareCopyrightOcrEngine:
+    async def recognize_image(self, image) -> str:
+        return (
+            "计算机软件著作权登记证书\n"
+            "软件名称：售电业务技术支持系统V1.0\n"
+            "著作权人：河南测试售电有限公司\n"
+            "登记号：2024SR1234567"
+        )
+
+    async def recognize_images(self, images) -> str:
+        return await self.recognize_image(None)
+
+
 class FakeAuditReportOcrEngine:
     _cover_text = (
         "审计报告\n"
@@ -110,7 +137,12 @@ def _wait_task(client: TestClient, task_id: str) -> dict:
 def test_supported_types(client: TestClient) -> None:
     response = client.get("/api/v1/test/supported-types")
     assert response.status_code == 200
-    assert response.json()["data"]["types"] == [1, 2, 3]
+    data = response.json()["data"]
+    assert data["types"] == [1, 2, 3, 4, 5, 6]
+    assert [item["type"] for item in data["items"]] == [1, 2, 3, 4, 5, 6]
+    assert data["items"][3]["name"] == "验资报告"
+    assert data["items"][4]["name"] == "从业人员身份证"
+    assert data["items"][5]["name"] == "等级保护备案/软件著作权"
 
 
 @patch("ocr_rel.services.recognition_service.get_ocr_engine", return_value=FakeOcrEngine())
@@ -231,3 +263,84 @@ def test_test_recognize_audit_report(mock_engine, client: TestClient) -> None:
     assert detail["companyName"] == "河南测试售电有限公司"
     assert "立信会计师事务所" in detail["accountingFirmName"]
     assert detail["totalAssets"] == "25000000"
+
+
+@patch("ocr_rel.services.recognition_service.get_ocr_engine", return_value=FakeIdCardOcrEngine())
+def test_test_recognize_employee_id_with_personnel(mock_engine, client: TestClient) -> None:
+    pdf_bytes = _make_pdf_bytes("id-card")
+    files = {"file": ("employee-id.pdf", io.BytesIO(pdf_bytes), "application/pdf")}
+    data = {
+        "registration_id": "reg-employee-001",
+        "doc_type": "5",
+        "attachment_name": "从业人员身份证",
+        "ocr_engine": "paddle",
+        "personnel": "张三",
+    }
+    response = client.post("/api/v1/test/recognize", files=files, data=data)
+    assert response.status_code == 200
+    task_id = response.json()["data"]["taskId"]
+
+    final = _wait_task(client, task_id)
+    assert final["status"] == "success"
+
+    callback_resp = client.get(f"/api/v1/tasks/{task_id}/callback")
+    assert callback_resp.status_code == 200
+    callback = callback_resp.json()["data"]
+    detail = callback["results"][0]["detail"][0]
+    assert callback["results"][0]["type"] == 5
+    assert detail["name"] == "张三"
+    assert detail["idCardNumber"] == "410105199001011234"
+    assert detail["personnel"] == "张三"
+
+
+@patch("ocr_rel.services.recognition_service.get_ocr_engine", return_value=FakeGradeProtectionOcrEngine())
+def test_test_recognize_grade_protection(mock_engine, client: TestClient) -> None:
+    pdf_bytes = _make_pdf_bytes("grade-protection")
+    files = {"file": ("grade-protection.pdf", io.BytesIO(pdf_bytes), "application/pdf")}
+    data = {
+        "registration_id": "reg-grade-001",
+        "doc_type": "6",
+        "attachment_name": "等级保护备案证明",
+        "ocr_engine": "paddle",
+    }
+    response = client.post("/api/v1/test/recognize", files=files, data=data)
+    assert response.status_code == 200
+    task_id = response.json()["data"]["taskId"]
+
+    final = _wait_task(client, task_id)
+    assert final["status"] == "success"
+
+    callback_resp = client.get(f"/api/v1/tasks/{task_id}/callback")
+    assert callback_resp.status_code == 200
+    callback = callback_resp.json()["data"]
+    detail = callback["results"][0]["detail"][0]
+    assert callback["results"][0]["type"] == 6
+    assert detail["companyName"] == "河南测试售电有限公司"
+    assert detail["systemLevel"] == "二级"
+    assert detail["copyrightOwner"] == ""
+
+
+@patch("ocr_rel.services.recognition_service.get_ocr_engine", return_value=FakeSoftwareCopyrightOcrEngine())
+def test_test_recognize_software_copyright(mock_engine, client: TestClient) -> None:
+    pdf_bytes = _make_pdf_bytes("software-copyright")
+    files = {"file": ("software-copyright.pdf", io.BytesIO(pdf_bytes), "application/pdf")}
+    data = {
+        "registration_id": "reg-soft-001",
+        "doc_type": "6",
+        "attachment_name": "软件著作证书",
+        "ocr_engine": "paddle",
+    }
+    response = client.post("/api/v1/test/recognize", files=files, data=data)
+    assert response.status_code == 200
+    task_id = response.json()["data"]["taskId"]
+
+    final = _wait_task(client, task_id)
+    assert final["status"] == "success"
+
+    callback_resp = client.get(f"/api/v1/tasks/{task_id}/callback")
+    assert callback_resp.status_code == 200
+    callback = callback_resp.json()["data"]
+    detail = callback["results"][0]["detail"][0]
+    assert detail["copyrightOwner"] == "河南测试售电有限公司"
+    assert detail["companyName"] == ""
+    assert detail["systemLevel"] == ""

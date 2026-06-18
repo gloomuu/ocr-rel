@@ -25,6 +25,8 @@ def test_test_page_available() -> None:
         assert "AI 识别联调测试页" in response.text
         assert "调用历史" in response.text
         assert "文件名" in response.text
+        assert "加载中" in response.text
+        assert "1 - 营业执照" not in response.text
 
 
 def test_test_config_endpoint() -> None:
@@ -36,4 +38,7 @@ def test_test_config_endpoint() -> None:
         assert data["maxConcurrentTasks"] == 2
         assert data["maxUploadFileSize"] == 10 * 1024 * 1024
         assert data["maxStoredFiles"] == 100
-        assert data["serverOcrEngine"] in {"paddle", "aliyun"}
+        assert data["serverOcrEngine"] in {"local", "paddle", "aliyun"}
+        assert data["supportedTypes"] == [1, 2, 3, 4, 5, 6]
+        assert [item["type"] for item in data["supportedTypeItems"]] == [1, 2, 3, 4, 5, 6]
+        assert data["supportedTypeItems"][5]["name"] == "等级保护备案/软件著作权"

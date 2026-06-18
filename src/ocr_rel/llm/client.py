@@ -5,8 +5,10 @@ import re
 from typing import Any
 
 import httpx
+from PIL import Image
 
 from ocr_rel.config import settings
+from ocr_rel.llm.images import image_to_data_url
 from ocr_rel.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -24,15 +26,33 @@ class LlmClient:
     def is_configured(self) -> bool:
         return bool(self._api_key)
 
-    async def chat_json(self, *, system_prompt: str, user_prompt: str) -> dict[str, Any]:
+    async def chat_json(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        images: list[Image.Image] | None = None,
+    ) -> dict[str, Any]:
         if not self.is_configured:
             raise ValueError("LLM API key is not configured")
+
+        if images:
+            user_content: str | list[dict[str, Any]] = [{"type": "text", "text": user_prompt}]
+            for image in images:
+                user_content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": image_to_data_url(image)},
+                    }
+                )
+        else:
+            user_content = user_prompt
 
         payload: dict[str, Any] = {
             "model": self._model,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
+                {"role": "user", "content": user_content},
             ],
             "temperature": self._temperature,
         }

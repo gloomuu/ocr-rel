@@ -503,18 +503,21 @@
         <div>
           <label for="docType">附件 type</label>
           <select id="docType">
-            <option value="1">1 - 营业执照</option>
-            <option value="2">2 - 法人身份证</option>
-            <option value="3">3 - 审计报告</option>
+            <option value="" disabled selected>加载中…</option>
           </select>
         </div>
         <div>
           <label for="attachmentName">附件 name</label>
           <input id="attachmentName" type="text" value="营业执照" />
         </div>
+        <div id="personnelRow" hidden>
+          <label for="personnel">personnel（人员标识，type 5/9/10 透传）</label>
+          <input id="personnel" type="text" placeholder="例如：张三" />
+        </div>
         <div>
           <label for="ocrEngine">OCR 引擎</label>
           <select id="ocrEngine">
+            <option value="local">local（HTTP OCR 服务）</option>
             <option value="paddle">paddle</option>
             <option value="aliyun">aliyun</option>
           </select>
@@ -619,6 +622,8 @@
     const registrationIdInput = document.getElementById("registrationId");
     const docTypeInput = document.getElementById("docType");
     const attachmentNameInput = document.getElementById("attachmentName");
+    const personnelRow = document.getElementById("personnelRow");
+    const personnelInput = document.getElementById("personnel");
     const ocrEngineInput = document.getElementById("ocrEngine");
     const fileInput = document.getElementById("file");
     const submitBtn = document.getElementById("submitBtn");
@@ -760,9 +765,72 @@
     loginForm.addEventListener("submit", login);
     logoutBtn.addEventListener("click", logout);
 
+    const PERSONNEL_DOC_TYPES = new Set(["5", "9", "10"]);
+
+    function syncPersonnelFieldVisibility() {
+      const showPersonnel = PERSONNEL_DOC_TYPES.has(docTypeInput.value);
+      personnelRow.hidden = !showPersonnel;
+    }
+
     docTypeInput.addEventListener("change", () => {
-      attachmentNameInput.value = docTypeInput.options[docTypeInput.selectedIndex].text.split(" - ")[1] || "";
+      syncAttachmentNameFromDocType();
+      syncPersonnelFieldVisibility();
     });
+
+    function syncAttachmentNameFromDocType() {
+      const selected = docTypeInput.options[docTypeInput.selectedIndex];
+      if (!selected || !selected.value) return;
+      const name = selected.dataset.name || selected.text.split(" - ").slice(1).join(" - ");
+      attachmentNameInput.value = name || "";
+    }
+
+    function renderSupportedTypes(items) {
+      docTypeInput.innerHTML = "";
+
+      if (!items || items.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "暂无支持的附件类型";
+        option.disabled = true;
+        option.selected = true;
+        docTypeInput.appendChild(option);
+        submitBtn.disabled = true;
+        return;
+      }
+
+      items.forEach((item) => {
+        const option = document.createElement("option");
+        option.value = String(item.type);
+        option.dataset.name = item.name || "";
+        option.textContent = `${item.type} - ${item.name || `type-${item.type}`}`;
+        docTypeInput.appendChild(option);
+      });
+
+      docTypeInput.selectedIndex = 0;
+      syncAttachmentNameFromDocType();
+      syncPersonnelFieldVisibility();
+      submitBtn.disabled = false;
+    }
+
+    function normalizeSupportedTypeItems(config) {
+      if (config.supportedTypeItems && config.supportedTypeItems.length > 0) {
+        return config.supportedTypeItems;
+      }
+      const types = config.supportedTypes || config.types || [];
+      return types.map((type) => ({
+        type,
+        name: `type-${type}`,
+      }));
+    }
+
+    async function loadSupportedTypes() {
+      const response = await apiFetch("/api/v1/test/supported-types");
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(extractErrorMessage(payload, "加载支持的附件类型失败"));
+      }
+      renderSupportedTypes(normalizeSupportedTypeItems(payload.data || {}));
+    }
 
     function setStatus(status, stage, progress) {
       statusLine.innerHTML =
@@ -852,6 +920,9 @@
       formData.append("doc_type", docTypeInput.value);
       formData.append("attachment_name", attachmentNameInput.value);
       formData.append("ocr_engine", ocrEngineInput.value);
+      if (PERSONNEL_DOC_TYPES.has(docTypeInput.value) && personnelInput.value.trim()) {
+        formData.append("personnel", personnelInput.value.trim());
+      }
       formData.append("file", file);
 
       try {
@@ -1114,6 +1185,7 @@
       if (config.maxUploadFileSize) {
         maxUploadFileSize = config.maxUploadFileSize;
       }
+      renderSupportedTypes(normalizeSupportedTypeItems(config));
       const maxMb = (maxUploadFileSize / (1024 * 1024)).toFixed(0);
       pageConfigMeta.textContent =
         `默认 OCR：${config.ocrEngine} | 并发上限：${config.maxConcurrentTasks}（超出排队）| 上传限制：${maxMb}MB | 本地保留：${config.maxStoredFiles || 100} 个文件` +
@@ -1122,6 +1194,13 @@
     }
 
     async function initializeApp() {
+      if (docTypeInput.options.length <= 1 && docTypeInput.options[0]?.value === "") {
+        try {
+          await loadSupportedTypes();
+        } catch (err) {
+          errorBox.textContent = String(err);
+        }
+      }
       await loadHistory();
     }
 

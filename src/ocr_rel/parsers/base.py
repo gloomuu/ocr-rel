@@ -9,7 +9,12 @@ class BaseParser(ABC):
     doc_type: int
 
     @abstractmethod
-    def parse(self, text: str, personnel: str | None = None) -> dict[str, Any]:
+    def parse(
+        self,
+        text: str,
+        personnel: str | None = None,
+        attachment_name: str | None = None,
+    ) -> dict[str, Any]:
         pass
 
     @staticmethod

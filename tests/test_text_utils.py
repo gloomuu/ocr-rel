@@ -2,6 +2,7 @@ import pytest
 
 from ocr_rel.parsers.text_utils import (
     extract_approval_date,
+    extract_approval_date_from_seal,
     extract_company_name,
     extract_credit_code,
     extract_labeled_field,
@@ -109,6 +110,24 @@ def test_extract_approval_date_from_bottom_right() -> None:
 def test_extract_registered_address_inline() -> None:
     text = "住所深圳市南山区粤海街道科技南十二路6号中检大厦1801成立日期2008年11月04日"
     assert extract_registered_address(text) == "深圳市南山区粤海街道科技南十二路6号中检大厦1801"
+
+
+def test_extract_registered_address_strips_trailing_ocr_noise() -> None:
+    text = (
+        "住 所 深圳市罗湖区笋岗街道田心社区红岭北路2188号广田大厦27层重 "
+        "o 登记机关 2026年 03月 ( 03日"
+    )
+    assert extract_registered_address(text) == (
+        "深圳市罗湖区笋岗街道田心社区红岭北路2188号广田大厦27层"
+    )
+
+
+def test_extract_approval_date_from_seal_with_loose_ocr() -> None:
+    seal_text = "深圳市市场监督管理局 2020年05月20日"
+    assert extract_approval_date_from_seal(seal_text, "2008-11-04") == "2020-05-20"
+
+    garbled = "登记机关 2026年 03月 ( 03日"
+    assert extract_approval_date_from_seal(garbled, "2008-11-04") == "2026-03-03"
 
 
 def test_extract_company_name_by_suffix() -> None:

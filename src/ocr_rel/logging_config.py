@@ -60,6 +60,30 @@ def log_step(
     logger.info(" | ".join(parts))
 
 
+def log_ocr_text(
+    logger: logging.Logger,
+    *,
+    task_id: str | None = None,
+    registration_id: str | None = None,
+    doc_type: int | None = None,
+    text: str,
+    step: str = "ocr.text",
+) -> None:
+    """Log full OCR text on separate lines for debugging."""
+    parts: list[str] = []
+    if task_id:
+        parts.append(f"taskId={task_id}")
+    if registration_id:
+        parts.append(f"registrationId={registration_id}")
+    parts.append(f"step={step}")
+    parts.append("OCR识别内容")
+    if doc_type is not None:
+        parts.append(f"docType={doc_type}")
+    parts.append(f"textLength={len(text)}")
+    header = " | ".join(parts)
+    logger.info("%s\n%s", header, text)
+
+
 def log_result(
     logger: logging.Logger,
     *,

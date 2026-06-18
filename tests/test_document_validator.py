@@ -77,3 +77,86 @@ def test_validate_audit_report_with_business_license_text_fails() -> None:
 def test_validate_business_license_with_audit_report_text_fails() -> None:
     with pytest.raises(DocumentTypeMismatchError, match="审计报告"):
         validate_document_type(1, AUDIT_REPORT_TEXT)
+
+
+CAPITAL_VERIFICATION_TEXT = (
+    "验资报告\n"
+    "被验资单位：河南测试售电有限公司\n"
+    "会计师事务所：立信会计师事务所（特殊普通合伙）\n"
+    "验资报告文号：京信验字(2023)第12345号\n"
+    "注册资本：人民币2000万元\n"
+    "实收资本：人民币2000万元"
+)
+
+
+def test_validate_capital_verification_passes() -> None:
+    validate_document_type(4, CAPITAL_VERIFICATION_TEXT)
+    assert detect_document_type(CAPITAL_VERIFICATION_TEXT) == 4
+
+
+def test_validate_capital_verification_with_audit_report_text_fails() -> None:
+    with pytest.raises(DocumentTypeMismatchError, match="审计报告"):
+        validate_document_type(4, AUDIT_REPORT_TEXT)
+
+
+def test_validate_audit_report_with_capital_verification_text_fails() -> None:
+    with pytest.raises(DocumentTypeMismatchError, match="验资报告"):
+        validate_document_type(3, CAPITAL_VERIFICATION_TEXT)
+
+
+def test_validate_employee_id_passes() -> None:
+    validate_document_type(5, ID_CARD_TEXT)
+    assert detect_document_type(ID_CARD_TEXT) in {2, 5}
+
+
+def test_validate_employee_id_with_business_license_text_fails() -> None:
+    with pytest.raises(DocumentTypeMismatchError, match="营业执照"):
+        validate_document_type(5, BUSINESS_LICENSE_TEXT)
+
+
+def test_validate_legal_person_id_with_same_id_card_text_as_type5_passes() -> None:
+    validate_document_type(5, ID_CARD_TEXT)
+
+
+GRADE_PROTECTION_TEXT = (
+    "信息系统安全等级保护备案证明\n"
+    "单位名称：河南测试售电有限公司\n"
+    "系统名称：售电业务技术支持系统\n"
+    "安全保护等级：第三级\n"
+    "备案公安机关：郑州市公安局"
+)
+
+
+def test_validate_grade_protection_passes() -> None:
+    validate_document_type(6, GRADE_PROTECTION_TEXT)
+    assert detect_document_type(GRADE_PROTECTION_TEXT) == 6
+
+
+def test_validate_grade_protection_with_business_license_text_fails() -> None:
+    with pytest.raises(DocumentTypeMismatchError, match="营业执照"):
+        validate_document_type(6, BUSINESS_LICENSE_TEXT)
+
+
+SOFTWARE_COPYRIGHT_TEXT = (
+    "计算机软件著作权登记证书\n"
+    "软件名称：售电业务技术支持系统V1.0\n"
+    "著作权人：河南测试售电有限公司\n"
+    "登记号：2024SR1234567"
+)
+
+
+def test_validate_software_copyright_passes() -> None:
+    validate_document_type(6, SOFTWARE_COPYRIGHT_TEXT)
+    assert detect_document_type(SOFTWARE_COPYRIGHT_TEXT) == 6
+
+
+def test_validate_type6_passes_with_primary_marker_only() -> None:
+    validate_document_type(6, "信息系统安全等级保护备案证明\n单位名称：测试公司")
+
+
+def test_validate_type6_passes_with_network_security_title() -> None:
+    validate_document_type(6, "网络安全等级保护备案证明\n单位名称：测试公司")
+
+
+def test_validate_type6_passes_with_spaced_ocr_text() -> None:
+    validate_document_type(6, "信 息 系 统 安 全 等 级 保 护 备 案 证 明\n单 位 名 称：测试公司")

@@ -1,8 +1,6 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: registry.cn-hangzhou.aliyuncs.com/corpass/ocr-rel:2.3
     container_name: ocr-rel
     ports:
       - "${APP_PORT:-8000}:8000"
@@ -11,6 +9,7 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      PYTHONPATH: /app/src
       DATABASE_PATH: ${DATABASE_PATH:-data/ocr-rel.db}
       UPLOAD_STORAGE_PATH: ${UPLOAD_STORAGE_PATH:-data/uploads}
       MAX_UPLOAD_FILE_SIZE: ${MAX_UPLOAD_FILE_SIZE:-10485760}
@@ -18,7 +17,10 @@ services:
       MAX_CONCURRENT_TASKS: ${MAX_CONCURRENT_TASKS:-2}
       TEST_PAGE_DEFAULT_OCR_ENGINE: ${TEST_PAGE_DEFAULT_OCR_ENGINE:-aliyun}
     volumes:
+      # 源码热更新：配合镜像内 pip install -e .，改宿主机 ./src 后 restart 容器即可
+      - ./src:/app/src
       - ./data:/app/data
+      - ./logs:/app/logs
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]

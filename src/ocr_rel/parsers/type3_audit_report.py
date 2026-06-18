@@ -376,7 +376,12 @@ def _trim_firm_noise(value: str) -> str:
 class AuditReportParser(BaseParser):
     doc_type = 3
 
-    def parse(self, text: str, personnel: str | None = None) -> dict[str, Any]:
+    def parse(
+        self,
+        text: str,
+        personnel: str | None = None,
+        attachment_name: str | None = None,
+    ) -> dict[str, Any]:
         detail = extract_cover_fields(text)
         if is_balance_sheet_page(text):
             assets = extract_total_assets_from_balance_sheet(text)
