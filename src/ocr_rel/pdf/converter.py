@@ -8,8 +8,8 @@ from ocr_rel.logging_config import get_logger, log_step
 
 logger = get_logger(__name__)
 
-IMAGE_SUPPORTED_TYPES = {1, 2, 5}
-COVER_PAGE_ONLY_TYPES = {4}
+IMAGE_SUPPORTED_TYPES = {1, 2, 5, 7, 8, 9, 10, 11}
+COVER_PAGE_ONLY_TYPES = {4, 7, 8, 9, 10, 11}
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
 PDF_EXTENSIONS = {".pdf"}
 

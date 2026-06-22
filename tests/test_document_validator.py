@@ -160,3 +160,56 @@ def test_validate_type6_passes_with_network_security_title() -> None:
 
 def test_validate_type6_passes_with_spaced_ocr_text() -> None:
     validate_document_type(6, "信 息 系 统 安 全 等 级 保 护 备 案 证 明\n单 位 名 称：测试公司")
+
+
+CREDIT_REPORT_TEXT = (
+    "个人信用报告\n"
+    "（本人版）\n"
+    "报告编号：2024062214301234567890\n"
+    "被查询者姓名：王五\n"
+    "被查询者证件类型：身份证\n"
+    "被查询者证件号码：110101198501011234\n"
+    "查询机构：某某银行股份有限公司\n"
+    "中国人民银行征信中心\n"
+    "信息概要\n"
+    "信贷记录"
+)
+
+
+def test_validate_credit_report_passes() -> None:
+    validate_document_type(7, CREDIT_REPORT_TEXT)
+    assert detect_document_type(CREDIT_REPORT_TEXT) == 7
+
+
+def test_validate_credit_report_with_id_card_text_fails() -> None:
+    with pytest.raises(DocumentTypeMismatchError, match="法人身份证"):
+        validate_document_type(7, ID_CARD_TEXT)
+
+
+def test_validate_id_card_with_credit_report_text_fails() -> None:
+    with pytest.raises(DocumentTypeMismatchError, match="法人征信报告"):
+        validate_document_type(2, CREDIT_REPORT_TEXT)
+
+
+CREDIT_PROOF_TEXT = (
+    "中国执行信息公开网\n"
+    "全国法院失信被执行人名单信息公布与查询\n"
+    "被执行人姓名/名称：河南测试售电有限公司\n"
+    "证件号码/组织机构代码：91410000MA9ABCDEF0\n"
+    "查询结果：在全国范围内没有找到符合条件的信息"
+)
+
+
+def test_validate_credit_proof_passes() -> None:
+    validate_document_type(8, CREDIT_PROOF_TEXT)
+    assert detect_document_type(CREDIT_PROOF_TEXT) == 8
+
+
+def test_validate_credit_proof_with_credit_report_text_fails() -> None:
+    with pytest.raises(DocumentTypeMismatchError, match="法人征信报告"):
+        validate_document_type(8, CREDIT_REPORT_TEXT)
+
+
+def test_validate_credit_report_with_credit_proof_text_fails() -> None:
+    with pytest.raises(DocumentTypeMismatchError, match="信用证明"):
+        validate_document_type(7, CREDIT_PROOF_TEXT)

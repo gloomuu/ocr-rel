@@ -83,6 +83,33 @@ _SOFTWARE_COPYRIGHT_KEYWORDS: list[tuple[str, int]] = [
     ("软件名称", 1),
 ]
 
+_CREDIT_REPORT_KEYWORDS: list[tuple[str, int]] = [
+    ("个人信用报告", 5),
+    ("中国人民银行征信中心", 5),
+    ("征信中心", 4),
+    ("征信报告", 4),
+    ("被查询者姓名", 3),
+    ("被查询者证件号码", 3),
+    ("信息概要", 2),
+    ("信贷记录", 2),
+    ("报告编号", 2),
+    ("本人版", 1),
+]
+
+_CREDIT_PROOF_KEYWORDS: list[tuple[str, int]] = [
+    ("中国执行信息公开网", 5),
+    ("失信被执行人", 5),
+    ("全国法院失信被执行人", 5),
+    ("执行信息公开", 4),
+    ("被执行人", 4),
+    ("查询结果", 3),
+    ("严重违法失信", 3),
+    ("信用中国", 2),
+    ("失信被执行", 2),
+    ("证件号码", 1),
+    ("组织机构代码", 1),
+]
+
 _TYPE6_KEYWORDS: list[tuple[str, int]] = _GRADE_PROTECTION_KEYWORDS + _SOFTWARE_COPYRIGHT_KEYWORDS
 
 _TYPE_KEYWORDS: dict[int, list[tuple[str, int]]] = {
@@ -92,9 +119,15 @@ _TYPE_KEYWORDS: dict[int, list[tuple[str, int]]] = {
     4: _CAPITAL_VERIFICATION_KEYWORDS,
     5: _ID_CARD_KEYWORDS,
     6: _TYPE6_KEYWORDS,
+    7: _CREDIT_REPORT_KEYWORDS,
+    8: _CREDIT_PROOF_KEYWORDS,
+    9: _CREDIT_PROOF_KEYWORDS,
+    10: _CREDIT_PROOF_KEYWORDS,
+    11: _CREDIT_PROOF_KEYWORDS,
 }
 
-_ID_CARD_TYPES = {2, 5, 7}
+_ID_CARD_TYPES = {2, 5}
+_ID_PATTERN_TYPES = {2, 5, 7}
 
 _CREDIT_CODE_PATTERN = re.compile(r"[0-9A-HJ-NP-RTUW-Y]{2}\d{6}[0-9A-HJ-NP-RTUW-Y]{10}")
 _ID_CARD_PATTERN = re.compile(r"\d{17}[\dXx]")
@@ -125,7 +158,7 @@ def score_document_type(doc_type: int, text: str) -> int:
 
     if doc_type == 1 and _CREDIT_CODE_PATTERN.search(normalized):
         score += 3
-    if doc_type in _ID_CARD_TYPES and _ID_CARD_PATTERN.search(normalized):
+    if doc_type in _ID_PATTERN_TYPES and _ID_CARD_PATTERN.search(normalized):
         score += 3
 
     return score
@@ -155,6 +188,24 @@ def validate_document_type(doc_type: int, text: str) -> None:
         from ocr_rel.parsers.type6_grade_protection import is_type6_content
 
         if is_type6_content(text):
+            return
+
+    if doc_type == 7:
+        from ocr_rel.parsers.type7_credit_report import is_credit_report_content
+
+        if is_credit_report_content(text):
+            return
+
+    if doc_type == 8:
+        from ocr_rel.parsers.type8_credit_proof import is_credit_proof_content
+
+        if is_credit_proof_content(text):
+            return
+
+    if doc_type in {9, 10, 11}:
+        from ocr_rel.parsers.type8_credit_proof import is_credit_proof_content
+
+        if is_credit_proof_content(text):
             return
 
     if detected_type is not None and detected_type != doc_type:

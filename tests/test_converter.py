@@ -38,6 +38,21 @@ def test_document_to_images_type4_uses_first_page_only() -> None:
     assert len(images) == 1
 
 
+def test_document_to_images_type7_uses_first_page_only() -> None:
+    images = document_to_images(_make_pdf_bytes(pages=5), doc_type=7, filename="credit-report.pdf")
+    assert len(images) == 1
+
+
+def test_document_to_images_type8_uses_first_page_only() -> None:
+    images = document_to_images(_make_pdf_bytes(pages=5), doc_type=8, filename="credit-proof.pdf")
+    assert len(images) == 1
+
+
+def test_document_to_images_png_for_type8() -> None:
+    images = document_to_images(_make_png_bytes(), doc_type=8, filename="credit-proof.png")
+    assert len(images) == 1
+
+
 def test_document_to_images_type6_renders_all_pages() -> None:
     images = document_to_images(_make_pdf_bytes(pages=5), doc_type=6, filename="grade-protection.pdf")
     assert len(images) == 5
@@ -56,6 +71,11 @@ def test_document_to_images_png_for_type2() -> None:
 
 def test_document_to_images_png_for_type5() -> None:
     images = document_to_images(_make_png_bytes(), doc_type=5, filename="employee-id.jpg")
+    assert len(images) == 1
+
+
+def test_document_to_images_png_for_type7() -> None:
+    images = document_to_images(_make_png_bytes(), doc_type=7, filename="credit-report.png")
     assert len(images) == 1
 
 

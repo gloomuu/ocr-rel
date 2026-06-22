@@ -2,6 +2,7 @@ import base64
 
 import httpx
 
+from ocr_rel.clients.platform_utils import is_platform_success_code
 from ocr_rel.config import settings
 from ocr_rel.logging_config import get_logger
 
@@ -30,7 +31,7 @@ class PlatformFileClient:
         code = body.get("code", 0)
         if code == 1001:
             raise ValueError(f"File UUID invalid or expired: {file_uuid}")
-        if code != 0:
+        if not is_platform_success_code(code):
             raise ValueError(body.get("message") or f"Download failed with code {code}")
 
         data = body.get("data") or {}

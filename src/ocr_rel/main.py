@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from ocr_rel import __version__
 from ocr_rel.api.auth import router as auth_router
+from ocr_rel.api.document_analysis import router as document_analysis_router
 from ocr_rel.api.recognize import router as recognize_router
 from ocr_rel.api.tasks import router as tasks_router
 from ocr_rel.api.test_api import router as test_router
@@ -62,6 +63,7 @@ app = FastAPI(
 )
 
 app.include_router(auth_router)
+app.include_router(document_analysis_router)
 app.include_router(recognize_router)
 app.include_router(tasks_router)
 app.include_router(test_router)

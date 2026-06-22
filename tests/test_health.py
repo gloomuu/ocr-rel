@@ -39,6 +39,8 @@ def test_test_config_endpoint() -> None:
         assert data["maxUploadFileSize"] == 10 * 1024 * 1024
         assert data["maxStoredFiles"] == 100
         assert data["serverOcrEngine"] in {"local", "paddle", "aliyun"}
-        assert data["supportedTypes"] == [1, 2, 3, 4, 5, 6]
-        assert [item["type"] for item in data["supportedTypeItems"]] == [1, 2, 3, 4, 5, 6]
-        assert data["supportedTypeItems"][5]["name"] == "等级保护备案/软件著作权"
+        assert data["supportedTypes"] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        assert [item["type"] for item in data["supportedTypeItems"]] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        assert data["supportedTypeItems"][7]["name"] == "信用证明"
+        assert data["supportedTypeItems"][8]["name"] == "企业董事、监事、高级管理人员信用证明"
+        assert data["supportedTypeItems"][9]["name"] == "股东信用证明"

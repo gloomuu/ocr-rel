@@ -2,9 +2,11 @@ import asyncio
 
 import httpx
 
+from ocr_rel.clients.platform_utils import is_platform_success_code
 from ocr_rel.config import settings
 from ocr_rel.logging_config import get_logger, log_step
 from ocr_rel.models.schemas import CallbackPayload
+from ocr_rel.services.callback_serializer import serialize_callback_payload
 
 logger = get_logger(__name__)
 
@@ -33,7 +35,7 @@ class PlatformCallbackClient:
             return
 
         url = f"{self._base_url}/api/ai/result/callback"
-        body = payload.model_dump()
+        body = serialize_callback_payload(payload)
         log_step(
             logger,
             registration_id=payload.registrationId,
@@ -49,7 +51,7 @@ class PlatformCallbackClient:
                     response.raise_for_status()
                     result = response.json()
                 code = result.get("code", 0)
-                if code == 0:
+                if is_platform_success_code(code):
                     log_step(
                         logger,
                         registration_id=payload.registrationId,

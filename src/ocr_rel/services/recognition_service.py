@@ -577,6 +577,25 @@ class RecognitionService:
                 docType=doc_type,
                 personnel=personnel or "",
             )
+        elif doc_type == 7:
+            log_step(
+                logger,
+                task_id=task_id,
+                registration_id=registration_id,
+                step="recognize.type7.start",
+                message="法人征信报告识别",
+                docType=doc_type,
+            )
+        elif doc_type in {8, 9, 10, 11}:
+            log_step(
+                logger,
+                task_id=task_id,
+                registration_id=registration_id,
+                step=f"recognize.type{doc_type}.start",
+                message="信用证明识别",
+                docType=doc_type,
+                personnel=personnel or "",
+            )
 
         text = await engine.recognize_images(images)
         if not text.strip():

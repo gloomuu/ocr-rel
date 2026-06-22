@@ -15,8 +15,8 @@ ATTACHMENT_TYPE_NAMES: dict[int, str] = {
     6: "等级保护备案/软件著作权",
     7: "法人征信报告",
     8: "信用证明",
-    9: "信用证明",
-    10: "信用证明",
+    9: "企业董事、监事、高级管理人员信用证明",
+    10: "股东信用证明",
     11: "信用证明",
 }
 
@@ -64,6 +64,17 @@ class RecognizeRequest(BaseModel):
 
 class RecognizeResponse(BaseModel):
     taskId: str
+
+
+class DocumentAnalysisSubmitData(BaseModel):
+    taskId: str
+    registrationId: str
+
+
+class DocumentAnalysisSubmitResponse(BaseModel):
+    code: str = "0"
+    message: str = "accepted"
+    data: DocumentAnalysisSubmitData
 
 
 class ApiResponse(BaseModel):

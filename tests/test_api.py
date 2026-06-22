@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from ocr_rel.config import settings
 from ocr_rel.main import app
+from ocr_rel.services.callback_serializer import serialize_callback_payload
 
 
 @pytest.fixture(autouse=True)
@@ -138,11 +139,11 @@ def test_supported_types(client: TestClient) -> None:
     response = client.get("/api/v1/test/supported-types")
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["types"] == [1, 2, 3, 4, 5, 6]
-    assert [item["type"] for item in data["items"]] == [1, 2, 3, 4, 5, 6]
-    assert data["items"][3]["name"] == "验资报告"
-    assert data["items"][4]["name"] == "从业人员身份证"
-    assert data["items"][5]["name"] == "等级保护备案/软件著作权"
+    assert data["types"] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    assert [item["type"] for item in data["items"]] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    assert data["items"][7]["name"] == "信用证明"
+    assert data["items"][8]["name"] == "企业董事、监事、高级管理人员信用证明"
+    assert data["items"][9]["name"] == "股东信用证明"
 
 
 @patch("ocr_rel.services.recognition_service.get_ocr_engine", return_value=FakeOcrEngine())
@@ -344,3 +345,92 @@ def test_test_recognize_software_copyright(mock_engine, client: TestClient) -> N
     assert detail["copyrightOwner"] == "河南测试售电有限公司"
     assert detail["companyName"] == ""
     assert detail["systemLevel"] == ""
+
+
+def test_document_analysis_submit_rejects_unsupported_type(client: TestClient) -> None:
+    payload = {
+        "registrationId": "reg-unsupported",
+        "files": [
+            {
+                "type": 8,
+                "name": "信用证明",
+                "files": [{"uuid": "uuid-001"}],
+            }
+        ],
+    }
+    with patch("ocr_rel.services.submit_service.supported_types", return_value=[1, 2, 3]):
+        response = client.post("/v1/document/analysis/submit", json=payload)
+    assert response.status_code == 400
+    assert 8 in response.json()["detail"]["unsupportedTypes"]
+
+
+@patch("ocr_rel.services.recognition_service.get_ocr_engine", return_value=FakeOcrEngine())
+@patch("ocr_rel.services.recognition_service.PlatformCallbackClient.send_callback", new_callable=AsyncMock)
+@patch("ocr_rel.services.recognition_service.PlatformFileClient.download_file", new_callable=AsyncMock)
+def test_document_analysis_submit(mock_download, mock_callback, mock_engine, client: TestClient) -> None:
+    mock_download.return_value = ("license.pdf", _make_pdf_bytes())
+
+    payload = {
+        "registrationId": "123456",
+        "files": [
+            {
+                "type": 1,
+                "name": "营业执照",
+                "files": [{"uuid": "uuid-001"}],
+            }
+        ],
+    }
+    response = client.post("/v1/document/analysis/submit", json=payload)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["code"] == "0"
+    assert body["message"] == "accepted"
+    assert body["data"]["registrationId"] == "123456"
+    task_id = body["data"]["taskId"]
+
+    final = _wait_task(client, task_id)
+    assert final["status"] == "success"
+    mock_download.assert_awaited_once()
+    mock_callback.assert_awaited_once()
+
+
+@patch("ocr_rel.services.recognition_service.get_ocr_engine", return_value=FakeAuditReportOcrEngine())
+@patch("ocr_rel.services.recognition_service.PlatformCallbackClient.send_callback", new_callable=AsyncMock)
+@patch("ocr_rel.services.recognition_service.PlatformFileClient.download_file", new_callable=AsyncMock)
+def test_document_analysis_callback_serializes_total_assets(
+    mock_download,
+    mock_callback,
+    mock_engine,
+    client: TestClient,
+) -> None:
+    mock_download.return_value = (
+        "audit.pdf",
+        _make_multi_page_pdf(
+            [
+                "审计报告 cover",
+                "资产负债表 资产总计 25000000",
+            ]
+        ),
+    )
+
+    payload = {
+        "registrationId": "reg-audit",
+        "files": [
+            {
+                "type": 3,
+                "name": "审计报告",
+                "files": [{"uuid": "uuid-audit"}],
+            }
+        ],
+    }
+    response = client.post("/v1/document/analysis/submit", json=payload)
+    task_id = response.json()["data"]["taskId"]
+    final = _wait_task(client, task_id)
+    assert final["status"] == "success"
+
+    callback_payload = mock_callback.await_args.args[0]
+    callback_body = serialize_callback_payload(callback_payload)
+    detail = callback_body["results"][0]["detail"][0]
+    assert callback_body["results"][0]["name"] == "审计报告"
+    assert detail["totalAssets"] == 25000000
+    assert isinstance(detail["totalAssets"], int)

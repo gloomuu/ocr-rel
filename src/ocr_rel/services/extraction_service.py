@@ -8,6 +8,7 @@ from ocr_rel.logging_config import get_logger, log_step
 from ocr_rel.parsers.registry import get_parser, supported_types
 from ocr_rel.parsers.text_utils import extract_register_authority, is_invalid_register_authority
 from ocr_rel.parsers.type3_audit_report import extract_total_assets
+from ocr_rel.parsers.type8_credit_proof import finalize_credit_proof_detail
 
 logger = get_logger(__name__)
 
@@ -31,6 +32,10 @@ class ExtractionService:
         if assets:
             detail["totalAssets"] = assets
         return detail
+
+    @staticmethod
+    def _finalize_credit_proof_detail(detail: dict[str, Any], ocr_text: str) -> dict[str, Any]:
+        return finalize_credit_proof_detail(detail, ocr_text)
 
     async def extract(
         self,
@@ -77,6 +82,10 @@ class ExtractionService:
                     detail = self._finalize_business_license_detail(detail, ocr_text)
                 elif doc_type == 3:
                     detail = self._finalize_audit_report_detail(detail, ocr_text)
+                elif doc_type == 8:
+                    detail = self._finalize_credit_proof_detail(detail, ocr_text)
+                elif doc_type in {9, 10, 11}:
+                    detail = self._finalize_credit_proof_detail(detail, ocr_text)
                 return detail
             except Exception as exc:
                 log_step(
@@ -107,6 +116,10 @@ class ExtractionService:
             detail = self._finalize_business_license_detail(detail, ocr_text)
         elif doc_type == 3:
             detail = self._finalize_audit_report_detail(detail, ocr_text)
+        elif doc_type == 8:
+            detail = self._finalize_credit_proof_detail(detail, ocr_text)
+        elif doc_type in {9, 10, 11}:
+            detail = self._finalize_credit_proof_detail(detail, ocr_text)
         log_step(
             logger,
             task_id=task_id,

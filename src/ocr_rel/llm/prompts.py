@@ -35,7 +35,20 @@ DOCUMENT_FIELD_SCHEMAS: dict[int, dict[str, str]] = {
         "companyName": "等级保护备案证明的单位名称，仅等保备案填写",
         "systemLevel": "等级保护备案的安全保护等级，输出一级/二级/三级/四级/五级，仅等保备案填写",
     },
+    7: {
+        "name": "被查询者/法人姓名（个人信用报告首页）",
+        "idCardNumber": "被查询者身份证号码，18位",
+    },
+    8: {
+        "executedPersonName": "截图中被查询的被执行人姓名或企业名称",
+        "queryResult": "查询结果原文（如「在全国范围内没有找到」「共查询到X条」等）",
+    },
 }
+
+_CREDIT_PROOF_FIELD_SCHEMA = DOCUMENT_FIELD_SCHEMAS[8]
+
+for _credit_proof_type in (9, 10, 11):
+    DOCUMENT_FIELD_SCHEMAS[_credit_proof_type] = dict(_CREDIT_PROOF_FIELD_SCHEMA)
 
 DOCUMENT_TYPE_NAMES: dict[int, str] = {
     1: "营业执照",
@@ -44,6 +57,11 @@ DOCUMENT_TYPE_NAMES: dict[int, str] = {
     4: "验资报告",
     5: "从业人员身份证",
     6: "等级保护备案/软件著作权",
+    7: "法人征信报告",
+    8: "信用证明",
+    9: "企业董事、监事、高级管理人员信用证明",
+    10: "股东信用证明",
+    11: "信用证明",
 }
 
 
@@ -98,6 +116,28 @@ def build_system_prompt(doc_type: int) -> str:
                 "6. 软著证书：仅从首页提取 copyrightOwner。",
             ]
         )
+    elif doc_type == 7:
+        type_rules.extend(
+            [
+                "4. 从个人信用报告（征信报告）文本提取被查询者姓名与身份证号码。",
+                "5. name 优先取「被查询者姓名」；idCardNumber 优先取「被查询者证件号码」。",
+                "6. 不要取查询机构、报告出具机构名称当作姓名。",
+            ]
+        )
+    elif doc_type in {8, 9, 10, 11}:
+        type_rules.extend(
+            [
+                "4. 从失信被执行人/信用查询截图 OCR 文本提取被执行主体名称与查询结果。",
+                "5. executedPersonName 优先取「被执行人姓名/名称」；可为自然人姓名或企业全称。",
+                "6. queryResult 取「查询结果」后的原文，或「在全国范围内没有找到」等结果性描述。",
+                "7. 若 OCR 显示被查询人无失信记录，queryResult 输出「暂无失信记录」。",
+                "8. 不要输出验证码、查询条件、证件号码等非结果字段。",
+            ]
+        )
+        if doc_type in {9, 10}:
+            type_rules.append(
+                "9. 若提供了 personnel 人员标识，不要在 JSON 中输出 personnel 字段（由系统另行透传）。"
+            )
 
     type_rules_text = "\n".join(type_rules)
     common_rules = """1. 只提取 OCR 文本中明确出现的信息，禁止猜测、补全或编造。

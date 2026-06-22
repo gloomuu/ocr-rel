@@ -70,8 +70,12 @@ def _normalize_date(value: str) -> str:
 def is_detail_sufficient(doc_type: int, detail: dict[str, str]) -> bool:
     if doc_type == 1:
         return bool(detail.get("unifiedSocialCreditCode") or detail.get("companyName"))
-    if doc_type in {2, 5}:
+    if doc_type in {2, 5, 7}:
         return bool(detail.get("name") or detail.get("idCardNumber"))
+    if doc_type == 8:
+        return bool(detail.get("executedPersonName") or detail.get("queryResult"))
+    if doc_type in {9, 10, 11}:
+        return bool(detail.get("executedPersonName") or detail.get("queryResult"))
     if doc_type == 3:
         return bool(detail.get("companyName") or detail.get("totalAssets") or detail.get("reportCode"))
     if doc_type == 4:
